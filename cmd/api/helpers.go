@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
 	"net/http"
 	"strconv"
@@ -18,4 +19,27 @@ func (app *application) readIDParam(r *http.Request) (int64, error) {
 	}
 
 	return id, nil
+}
+
+// writejson writes provided data into a json response
+// book diff: i renamed the js variable to json to avoid confusion
+func (app *application) writeJSON(w http.ResponseWriter, status int, data any, headers http.Header) error {
+	json, err := json.Marshal(data)
+	if err != nil {
+		return err
+	}
+
+	// append newline for pretty UwU
+	json = append(json, '\n')
+
+	// add headers from header map
+	for key, value := range headers {
+		// i think this key value syntax on the method is a bit odd but w.e.
+		w.Header()[key] = value
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	w.Write(json)
+	return nil
 }
