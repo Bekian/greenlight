@@ -3,6 +3,9 @@ package main
 import (
 	"fmt"
 	"net/http"
+	"time"
+
+	"github.com/Bekian/greenlight/internal/data"
 )
 
 // temp handler to create a new movie
@@ -19,6 +22,18 @@ func (app *application) showMovieHandler(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	// placeholder message for now
-	fmt.Fprintf(w, "show details of movie %d\n", id)
+	// create a movie instance with dummy data
+	movie := data.Movie{
+		ID:        id,
+		CreatedAt: time.Now(),
+		Runtime:   102,
+		Genres:    []string{"drama", "romance", "war"},
+		Version:   1,
+	}
+
+	err = app.writeJSON(w, http.StatusOK, movie, nil)
+	if err != nil {
+		app.logger.Error(err.Error())
+		http.Error(w, "The server encountered a problem and could not process your request", http.StatusInternalServerError)
+	}
 }
