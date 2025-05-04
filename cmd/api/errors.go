@@ -16,6 +16,7 @@ func (app *application) logError(r *http.Request, err error) {
 }
 
 // write a formatted json error response
+// DIFF: is called "errorResponse"
 func (app *application) errResponse(w http.ResponseWriter, r *http.Request, status int, message any) {
 	env := envelope{"error": message}
 
@@ -26,12 +27,9 @@ func (app *application) errResponse(w http.ResponseWriter, r *http.Request, stat
 	}
 }
 
-// 500
-func (app *application) serverErrorResponse(w http.ResponseWriter, r *http.Request, err error) {
-	app.logError(r, err)
-
-	msg := "the server encountered a problem and could not process your request"
-	app.errResponse(w, r, http.StatusInternalServerError, msg)
+// 400
+func (app *application) badRequestResponse(w http.ResponseWriter, r *http.Request, err error) {
+	app.errResponse(w, r, http.StatusBadRequest, err.Error())
 }
 
 // 404
@@ -44,4 +42,12 @@ func (app *application) notFoundResponse(w http.ResponseWriter, r *http.Request)
 func (app *application) methodNotAllowedResponse(w http.ResponseWriter, r *http.Request) {
 	msg := fmt.Sprintf("the %s method is not supported for this resource", r.Method)
 	app.errResponse(w, r, http.StatusMethodNotAllowed, msg)
+}
+
+// 500
+func (app *application) serverErrorResponse(w http.ResponseWriter, r *http.Request, err error) {
+	app.logError(r, err)
+
+	msg := "the server encountered a problem and could not process your request"
+	app.errResponse(w, r, http.StatusInternalServerError, msg)
 }

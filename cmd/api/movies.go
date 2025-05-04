@@ -10,7 +10,23 @@ import (
 
 // temp handler to create a new movie
 func (app *application) createMovieHandler(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintln(w, "create a new movie")
+	// target struct to decode request info into
+	var input struct {
+		Title   string   `json:"title"`
+		Year    int32    `json:"year"`
+		Runtime int32    `json:"runtime"`
+		Genres  []string `json:"genres"`
+	}
+
+	// decoder to pull response into struct
+	err := app.readJSON(w, r, &input)
+	if err != nil {
+		app.badRequestResponse(w, r, err)
+		return
+	}
+
+	// temp dump
+	fmt.Fprintf(w, "%+v\n", input)
 }
 
 // temp handler to show a movie
