@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/Bekian/greenlight/internal/data"
+	"github.com/Bekian/greenlight/internal/validator"
 )
 
 // temp handler to create a new movie
@@ -22,6 +23,23 @@ func (app *application) createMovieHandler(w http.ResponseWriter, r *http.Reques
 	err := app.readJSON(w, r, &input)
 	if err != nil {
 		app.badRequestResponse(w, r, err)
+		return
+	}
+
+	// init movie struct from data package
+	movie := &data.Movie{
+		Title:   input.Title,
+		Year:    input.Year,
+		Runtime: input.Runtime,
+		Genres:  input.Genres,
+	}
+
+	// init validator
+	v := validator.New()
+
+	// validate the movie struct with the validator
+	if data.ValidateMovie(v, movie); !v.Valid() {
+		app.failedValidationResponse(w, r, v.Errors)
 		return
 	}
 

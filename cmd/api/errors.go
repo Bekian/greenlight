@@ -51,3 +51,8 @@ func (app *application) serverErrorResponse(w http.ResponseWriter, r *http.Reque
 	msg := "the server encountered a problem and could not process your request"
 	app.errResponse(w, r, http.StatusInternalServerError, msg)
 }
+
+// generate a response using errors from a validator
+func (app *application) failedValidationResponse(w http.ResponseWriter, r *http.Request, errors map[string]string) {
+	app.errResponse(w, r, http.StatusUnprocessableEntity, errors)
+}
