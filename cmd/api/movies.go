@@ -26,7 +26,7 @@ func (app *application) createMovieHandler(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	// init movie struct from data package
+	// init movie struct
 	movie := &data.Movie{
 		Title:   input.Title,
 		Year:    input.Year,
@@ -43,8 +43,22 @@ func (app *application) createMovieHandler(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	// temp dump
-	fmt.Fprintf(w, "%+v\n", input)
+	// insert record
+	err = app.models.Movies.Insert(movie)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+		return
+	}
+
+	// provide location header
+	headers := make(http.Header)
+	headers.Set("Location", fmt.Sprintf("/v1/movies/%d", movie.ID))
+
+	// write status created with movie
+	err = app.writeJSON(w, http.StatusCreated, envelope{"movie": movie}, headers)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+	}
 }
 
 // temp handler to show a movie

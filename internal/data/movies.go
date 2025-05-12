@@ -5,6 +5,8 @@ import (
 	"time"
 
 	"github.com/Bekian/greenlight/internal/validator"
+
+	"github.com/lib/pq"
 )
 
 // the hyphen directive always omits
@@ -43,7 +45,18 @@ type MovieModel struct {
 
 // placeholder method for insert record into movie table
 func (m MovieModel) Insert(movie *Movie) error {
-	return nil
+	// insert statement (with weird string syntax)
+	query := `
+		INSERT INTO movies (title, year, runtime, genres)
+		VALUES ($1, $2, $3, $4)
+		RETURNING id, created_at, version
+	`
+	// slice of placeholder params
+	args := []any{movie.Title, movie.Year, movie.Runtime, pq.Array(movie.Genres)}
+
+	// execute query and return result
+	// we're writing the returned values back to the struct
+	return m.DB.QueryRow(query, args...).Scan(&movie.ID, &movie.CreatedAt, &movie.Version)
 }
 
 // placeholder method for get record by id
