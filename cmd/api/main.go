@@ -64,7 +64,7 @@ func main() {
 	// init logger
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 
-	// init db by opening with cfg using helper
+	// init db by opening with cfg using helper (see below)
 	db, err := openDB(cfg)
 	if err != nil {
 		logger.Error(err.Error())

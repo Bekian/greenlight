@@ -8,6 +8,7 @@ import (
 var (
 	// used for multiple tables
 	ErrRecordNotFound = errors.New("record not found")
+	ErrEditConflict   = errors.New("edit conflict")
 )
 
 // model wrapper for easy autocomplete access

@@ -44,6 +44,12 @@ func (app *application) methodNotAllowedResponse(w http.ResponseWriter, r *http.
 	app.errResponse(w, r, http.StatusMethodNotAllowed, msg)
 }
 
+// 409
+func (app *application) editConflictResponse(w http.ResponseWriter, r *http.Request) {
+	message := "unable to update the record due to an edit conflict, please try again"
+	app.errResponse(w, r, http.StatusConflict, message)
+}
+
 // 500
 func (app *application) serverErrorResponse(w http.ResponseWriter, r *http.Request, err error) {
 	app.logError(r, err)
