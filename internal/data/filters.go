@@ -59,3 +59,28 @@ func ValidateFilters(v *validator.Validator, f Filters) {
 	// validate sort parameter
 	v.Check(validator.PermittedValue(f.Sort, f.SortSafeList...), "sort", "invalid sort value")
 }
+
+// struct to hold pagination metadata
+type Metadata struct {
+	CurrentPage  int `json:"current_page,omitzero"`
+	PageSize     int `json:"page_size,omitzero"`
+	FirstPage    int `json:"first_page,omitzero"`
+	LastPage     int `json:"last_page,omitzero"`
+	TotalRecords int `json:"total_records,omitzero"`
+}
+
+// returns a populated instance of metadata
+func calculateMetadata(totalRecords, page, pageSize int) Metadata {
+	// return empty struct for no data
+	if totalRecords == 0 {
+		return Metadata{}
+	}
+
+	return Metadata{
+		CurrentPage:  page,
+		PageSize:     pageSize,
+		FirstPage:    1,
+		LastPage:     (totalRecords + pageSize - 1) / pageSize, // always a whole number
+		TotalRecords: totalRecords,
+	}
+}

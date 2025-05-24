@@ -111,7 +111,7 @@ func (m MovieModel) Get(id int64) (*Movie, error) {
 }
 
 // method to get all movies
-func (m MovieModel) GetAll(title string, genres []string, filters Filters) ([]*Movie, error) {
+func (m MovieModel) GetAll(title string, genres []string, filters Filters) ([]*Movie, Metadata, error) {
 	// query to get all movie records
 	// the "where" clause allows title searching
 	// the "and" where clause allows searching by genre(s)
@@ -120,7 +120,7 @@ func (m MovieModel) GetAll(title string, genres []string, filters Filters) ([]*M
 	// the last condition prevents cases where movies have a same column value,
 	// e.g. both movies have the same year of 1999
 	query := fmt.Sprintf(`
-        SELECT id, created_at, title, year, runtime, genres, version
+        SELECT count(*) OVER(), id, created_at, title, year, runtime, genres, version
         FROM movies
 	WHERE (to_tsvector('simple', title) @@ plainto_tsquery('simple', $1) OR $1 = '')
 	AND (genres @> $2 or $2 = '{}')
@@ -138,13 +138,13 @@ func (m MovieModel) GetAll(title string, genres []string, filters Filters) ([]*M
 	// pass the query args
 	rows, err := m.DB.QueryContext(ctx, query, args...)
 	if err != nil {
-		return nil, err
+		return nil, Metadata{}, err
 	}
 
 	// close resultset; "dealloc"
 	defer rows.Close()
 
-	// array of movie pointers
+	totalRecords := 0
 	movies := []*Movie{}
 
 	// iterate over the resultset to extract the data
@@ -154,6 +154,7 @@ func (m MovieModel) GetAll(title string, genres []string, filters Filters) ([]*M
 
 		// scan values into the struct
 		err := rows.Scan(
+			&totalRecords,
 			&movie.ID,
 			&movie.CreatedAt,
 			&movie.Title,
@@ -163,7 +164,7 @@ func (m MovieModel) GetAll(title string, genres []string, filters Filters) ([]*M
 			&movie.Version,
 		)
 		if err != nil {
-			return nil, err
+			return nil, Metadata{}, err
 		}
 
 		// add movie to slice
@@ -172,11 +173,13 @@ func (m MovieModel) GetAll(title string, genres []string, filters Filters) ([]*M
 
 	// check for any errors that occurred during iteration
 	if err = rows.Err(); err != nil {
-		return nil, err
+		return nil, Metadata{}, err
 	}
 
+	metadata := calculateMetadata(totalRecords, filters.Page, filters.PageSize)
+
 	// success
-	return movies, nil
+	return movies, metadata, nil
 }
 
 // method for updating a record
