@@ -16,6 +16,17 @@ type Filters struct {
 	SortSafeList []string // acceptable string values for sorting
 }
 
+// get the max limit of n records for each page.
+// this is used as a helper for sql queries
+func (f Filters) limit() int {
+	return f.PageSize
+}
+
+// calculate the number of records to skip for the offset clause in a sql query
+func (f Filters) offset() int {
+	return (f.Page - 1) * f.PageSize
+}
+
 // function to ensure the queried column is valid.
 // DIFF Note: the original code uses a for loop to see if the requested sort is
 // contained inside the SortSafeList
