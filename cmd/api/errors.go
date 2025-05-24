@@ -16,7 +16,7 @@ func (app *application) logError(r *http.Request, err error) {
 }
 
 // write a formatted json error response
-// DIFF: is called "errorResponse"
+// DIFF Note: is called "errorResponse"
 func (app *application) errResponse(w http.ResponseWriter, r *http.Request, status int, message any) {
 	env := envelope{"error": message}
 
@@ -48,6 +48,12 @@ func (app *application) methodNotAllowedResponse(w http.ResponseWriter, r *http.
 func (app *application) editConflictResponse(w http.ResponseWriter, r *http.Request) {
 	message := "unable to update the record due to an edit conflict, please try again"
 	app.errResponse(w, r, http.StatusConflict, message)
+}
+
+// 429
+func (app *application) rateLimitExceededResponse(w http.ResponseWriter, r *http.Request) {
+	message := "rate limit exceeded, wait a few seconds before trying again"
+	app.errResponse(w, r, http.StatusTooManyRequests, message)
 }
 
 // 500
