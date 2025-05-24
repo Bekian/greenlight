@@ -3,7 +3,10 @@ package main
 import (
 	"fmt"
 	"net/http"
+	"sync"
+	"time"
 
+	"github.com/tomasen/realip"
 	"golang.org/x/time/rate"
 )
 
@@ -27,16 +30,65 @@ func (app *application) recoverPanic(next http.Handler) http.Handler {
 }
 
 func (app *application) rateLimit(next http.Handler) http.Handler {
-	// ratelimit to allow an average of 2 requests/s, and up to 4 in a single burst
-	limiter := rate.NewLimiter(2, 4)
+	// skip if disabled in config
+	if !app.config.limiter.enabled {
+		return next
+	}
+	// struct to hold ratelimiter and last seen time
+	type client struct {
+		limiter  *rate.Limiter
+		lastSeen time.Time
+	}
+	// mutex and map to hold client IP and ratelimiters
+	var (
+		mu      sync.Mutex
+		clients = make(map[string]*client)
+	)
+
+	// start a background reap-loop goroutine to purge clients every minute
+	go func() {
+		for {
+			time.Sleep(time.Minute)
+
+			// lock to prevent race condition during cleanup
+			mu.Lock()
+
+			// cleanup clients with a 3 minute outstanding timer
+			for ip, client := range clients {
+				if time.Since(client.lastSeen) > 3*time.Minute {
+					delete(clients, ip)
+				}
+			}
+
+			mu.Unlock()
+		}
+	}()
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// ip from request
+		ip := realip.FromRequest(r)
+
+		mu.Lock()
+		// if the ip address is not found then add it
+		if _, found := clients[ip]; !found {
+			// create limiter for user
+			clients[ip] = &client{
+				limiter: rate.NewLimiter(rate.Limit(app.config.limiter.rps), app.config.limiter.burst),
+			}
+		}
+
+		// update last seen for the requesting client
+		clients[ip].lastSeen = time.Now()
+
 		// check if the limiter doesn't a request through
-		if !limiter.Allow() {
+		if !clients[ip].limiter.Allow() {
+			mu.Unlock()
 			app.rateLimitExceededResponse(w, r)
 			return
 		}
 
+		// ensure mutex is unlocked
+		mu.Unlock()
 		next.ServeHTTP(w, r)
 	})
 }

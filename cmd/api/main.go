@@ -30,6 +30,11 @@ type config struct {
 		maxIdleConns int
 		maxIdleTime  time.Duration
 	}
+	limiter struct {
+		rps     float64 // requests per second
+		burst   int     // maximum amount of requests a user can make at once
+		enabled bool    // flag to enable/disable rate-limiting
+	}
 }
 
 // app struct for dep injection across the app
@@ -59,6 +64,11 @@ func main() {
 	flag.IntVar(&cfg.db.maxOpenConns, "db-max-open-conns", 25, "PostgreSQL max open connections")
 	flag.IntVar(&cfg.db.maxIdleConns, "db-max-idle-conns", 25, "PostgreSQL max idle connections")
 	flag.DurationVar(&cfg.db.maxIdleTime, "db-max-idle-time", 15*time.Minute, "PostgreSQL max connection idle time")
+	// flags for rate limiting
+	flag.Float64Var(&cfg.limiter.rps, "limiter-rps", 2, "Rate limiter maximum requests per second")
+	flag.IntVar(&cfg.limiter.burst, "limiter-burst", 4, "Rate limiter maximum burst")
+	flag.BoolVar(&cfg.limiter.enabled, "limiter-enabled", true, "Enable rate limiter")
+
 	flag.Parse()
 
 	// init logger
