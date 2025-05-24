@@ -195,3 +195,40 @@ func (app *application) deleteMovieHandler(w http.ResponseWriter, r *http.Reques
 		app.serverErrorResponse(w, r, err)
 	}
 }
+
+// list movies with a query
+func (app *application) listMoviesHandler(w http.ResponseWriter, r *http.Request) {
+	// struct to hold expected values
+	var input struct {
+		Title  string
+		Genres []string
+		data.Filters
+	}
+
+	// init validator
+	v := validator.New()
+
+	// call query to get the query from the uri
+	qs := r.URL.Query()
+
+	// use helpers to extract title and genres, or use defaults if not found
+	input.Title = app.readString(qs, "title", "")
+	input.Genres = app.readCSV(qs, "genres", []string{})
+
+	// get page and page size query string values
+	// default page is 1 and page size is 20
+	input.Filters.Page = app.readInt(qs, "page", 1, v)
+	input.Filters.PageSize = app.readInt(qs, "page_size", 20, v)
+
+	// get sort query string value, fallback is "id" which is sort by ascending id
+	input.Filters.Sort = app.readString(qs, "sort", "id")
+
+	// check the validator instance
+	if !v.Valid() {
+		app.failedValidationResponse(w, r, v.Errors)
+		return
+	}
+
+	// temp dump the response
+	fmt.Fprintf(w, "%+v\n", input)
+}

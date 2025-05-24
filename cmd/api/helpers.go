@@ -6,8 +6,11 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
+
+	"github.com/Bekian/greenlight/internal/validator"
 
 	"github.com/julienschmidt/httprouter"
 )
@@ -104,4 +107,60 @@ func (app *application) readJSON(w http.ResponseWriter, r *http.Request, dst any
 	}
 
 	return nil
+}
+
+// returns a string value from a query string given a key string,
+// otherwise it will return the provided default value
+func (app *application) readString(qs url.Values, key string, defaultValue string) string {
+	// extract the value for a given key from the query string.
+	s := qs.Get(key)
+
+	// if nothing is found an empty string is provided,
+	// use that to return the default value.
+	if s == "" {
+		return defaultValue
+	}
+
+	return s
+}
+
+// finds and reads a string from the query string,
+// and splits it on the comma character.
+// if it is not found, it will return the provided default value
+func (app *application) readCSV(qs url.Values, key string, defaultValue []string) []string {
+	// extract the value for a given key from the query string.
+	csv := qs.Get(key)
+
+	// if nothing is found an empty string is provided,
+	// use that to return the default value.
+	if csv == "" {
+		return defaultValue
+	}
+
+	// split and return the slice
+	return strings.Split(csv, ",")
+}
+
+// attempt to find a string from the query value,
+// then attempt to convert to an integer,
+// if either fail, then return default value
+func (app *application) readInt(qs url.Values, key string, defaultValue int, v *validator.Validator) int {
+	// attempt to search for value
+	s := qs.Get(key)
+
+	// if no key exists or empty value, return default value.
+	if s == "" {
+		return defaultValue
+	}
+
+	// attempt to convert
+	// otherwise add an error to the validator
+	i, err := strconv.Atoi(s)
+	if err != nil {
+		v.AddError(key, "must be an integer value")
+		return defaultValue
+	}
+
+	// sucess!
+	return i
 }
