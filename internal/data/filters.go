@@ -1,6 +1,9 @@
 package data
 
 import (
+	"slices"
+	"strings"
+
 	"github.com/Bekian/greenlight/internal/validator"
 )
 
@@ -13,6 +16,28 @@ type Filters struct {
 	SortSafeList []string // acceptable string values for sorting
 }
 
+// function to ensure the queried column is valid.
+// DIFF Note: the original code uses a for loop to see if the requested sort is
+// contained inside the SortSafeList
+func (f Filters) sortColumn() string {
+	if slices.Contains(f.SortSafeList, f.Sort) {
+		return strings.TrimPrefix(f.Sort, "-")
+	}
+
+	// the queried sort column should've been checked before this
+	// this should be unreachable, but this will prevent sql injection here.
+	panic("unsafe sort parameter:" + f.Sort)
+}
+
+// return sort direction depending on prefix character, if any
+func (f Filters) sortDirection() string {
+	if strings.HasPrefix(f.Sort, "-") {
+		return "DESC"
+	}
+	return "ASC"
+}
+
+// runs validation checks on the filter's values
 func ValidateFilters(v *validator.Validator, f Filters) {
 	// ensure page and page size fields are acceptable values
 	// they have been pasted from the book to ensure functionality

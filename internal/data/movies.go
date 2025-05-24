@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/Bekian/greenlight/internal/validator"
@@ -112,12 +113,18 @@ func (m MovieModel) Get(id int64) (*Movie, error) {
 // method to get all movies
 func (m MovieModel) GetAll(title string, genres []string, filters Filters) ([]*Movie, error) {
 	// query to get all movie records
-	query := `
+	// the "where" clause allows title searching
+	// the "and" where clause allows searching by genre(s)
+	// the "order by" clause allows the user to order by column,
+	// additionally orders by ID to ensure consistent ordering.
+	// the last condition prevents cases where movies have a same column value,
+	// e.g. both movies have the same year of 1999
+	query := fmt.Sprintf(`
         SELECT id, created_at, title, year, runtime, genres, version
         FROM movies
 	WHERE (to_tsvector('simple', title) @@ plainto_tsquery('simple', $1) OR $1 = '')
 	AND (genres @> $2 or $2 = '{}')
-        ORDER BY id`
+        ORDER BY %s %s, id ASC`, filters.sortColumn(), filters.sortDirection())
 
 	// context with 3s timeout
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
