@@ -45,7 +45,7 @@ type MovieModel struct {
 	DB *sql.DB
 }
 
-// placeholder method for insert record into movie table
+// method for insert record into movie table
 func (m MovieModel) Insert(movie *Movie) error {
 	// insert statement (with weird string syntax)
 	query := `
@@ -64,7 +64,7 @@ func (m MovieModel) Insert(movie *Movie) error {
 	return m.DB.QueryRowContext(ctx, query, args...).Scan(&movie.ID, &movie.CreatedAt, &movie.Version)
 }
 
-// placeholder method for get record by id
+// method for get record by id
 func (m MovieModel) Get(id int64) (*Movie, error) {
 	// validate positive integer ID
 	if id < 1 {
@@ -109,7 +109,66 @@ func (m MovieModel) Get(id int64) (*Movie, error) {
 	return &movie, nil
 }
 
-// placeholder method for updating a record
+// method to get all movies
+func (m MovieModel) GetAll(title string, genres []string, filters Filters) ([]*Movie, error) {
+	// query to get all movie records
+	query := `
+        SELECT id, created_at, title, year, runtime, genres, version
+        FROM movies
+	WHERE (LOWER(title) = LOWER($1) OR $1 = '')
+	AND (genres @> $2 or $2 = '{}')
+        ORDER BY id`
+
+	// context with 3s timeout
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	// execute query, returns sql.Rows resultset,
+	// pass title and genres as placeholder param values
+	rows, err := m.DB.QueryContext(ctx, query, title, pq.Array(genres))
+	if err != nil {
+		return nil, err
+	}
+
+	// close resultset; "dealloc"
+	defer rows.Close()
+
+	// array of movie pointers
+	movies := []*Movie{}
+
+	// iterate over the resultset to extract the data
+	for rows.Next() {
+		// tmp movie
+		var movie Movie
+
+		// scan values into the struct
+		err := rows.Scan(
+			&movie.ID,
+			&movie.CreatedAt,
+			&movie.Title,
+			&movie.Year,
+			&movie.Runtime,
+			pq.Array(&movie.Genres),
+			&movie.Version,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		// add movie to slice
+		movies = append(movies, &movie)
+	}
+
+	// check for any errors that occurred during iteration
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+
+	// success
+	return movies, nil
+}
+
+// method for updating a record
 func (m MovieModel) Update(movie *Movie) error {
 	// set update query
 	query := `
@@ -147,7 +206,7 @@ func (m MovieModel) Update(movie *Movie) error {
 	return nil
 }
 
-// placeholder method for deleting a record by id
+// method for deleting a record by id
 func (m MovieModel) Delete(id int64) error {
 	// validate positive integer ID
 	if id < 1 {
