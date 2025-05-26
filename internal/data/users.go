@@ -93,9 +93,9 @@ func ValidateUser(v *validator.Validator, user *User) {
 // create new user
 func (m UserModel) Insert(user *User) error {
 	query := `
-	INSERT INTO users (name, email, password_hash, activated)
-	VALUES ($1, $2, $3, $4)
-	RETURNING id, created_at, version
+	INSERT INTO users (name, email, password_hash, activated) 
+        VALUES ($1, $2, $3, $4)
+        RETURNING id, created_at, version
 	`
 
 	args := []any{user.Name, user.Email, user.Password.hash, user.Activated}
@@ -104,10 +104,10 @@ func (m UserModel) Insert(user *User) error {
 	defer cancel()
 
 	// execute query, and return error if the specific one we're looking for is found
-	err := m.DB.QueryRowContext(ctx, query, args...).Scan(&user.ID)
+	err := m.DB.QueryRowContext(ctx, query, args...).Scan(&user.ID, &user.CreatedAt, &user.Version)
 	if err != nil {
 		switch {
-		case err.Error() == `pq: duplicate key value violates unique constraint "users_email_key`:
+		case err.Error() == `pq: duplicate key value violates unique constraint "users_email_key"`:
 			// this case lets us tell the user the email already exists
 			return ErrDuplicateEmail
 		case errors.Is(err, sql.ErrNoRows):
