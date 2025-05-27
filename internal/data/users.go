@@ -124,7 +124,7 @@ func (m UserModel) Insert(user *User) error {
 func (m UserModel) GetByEmail(email string) (*User, error) {
 	query := `
 	SELECT id, created_at, name, email, password_hash, activated, version
-	FROM users
+	FROM user
 	WHERE email = $1
 	`
 

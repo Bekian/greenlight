@@ -58,6 +58,14 @@ func (app *application) registerUserHandler(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
+	// use the users email to send an email with the users data to the user.
+	err = app.mailer.Send(user.Email, "user_welcome.tmpl", user)
+	app.logger.Error(user.Email)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+		return
+	}
+
 	// write the created user into the 201 response
 	err = app.writeJSON(w, http.StatusCreated, envelope{"user": user}, nil)
 	if err != nil {

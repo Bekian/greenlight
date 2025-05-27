@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/Bekian/greenlight/internal/data"
+	"github.com/Bekian/greenlight/internal/mailer"
 
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
@@ -33,6 +34,13 @@ type config struct {
 		burst   int     // maximum amount of requests a user can make at once
 		enabled bool    // flag to enable/disable rate-limiting
 	}
+	smtp struct {
+		host     string
+		port     int
+		username string
+		password string
+		sender   string
+	}
 }
 
 // app struct for dep injection across the app
@@ -40,8 +48,10 @@ type application struct {
 	config config
 	logger *slog.Logger
 	models data.Models
+	mailer *mailer.Mailer
 }
 
+// DIFF Note: several CLI flag default values use local environment variables for security.
 func main() {
 	// declare an instance of config to use in our app
 	var cfg config
@@ -66,12 +76,18 @@ func main() {
 	flag.Float64Var(&cfg.limiter.rps, "limiter-rps", 2, "Rate limiter maximum requests per second")
 	flag.IntVar(&cfg.limiter.burst, "limiter-burst", 4, "Rate limiter maximum burst")
 	flag.BoolVar(&cfg.limiter.enabled, "limiter-enabled", true, "Enable rate limiter")
+	// flags for mail server
+	flag.StringVar(&cfg.smtp.host, "smtp-host", "sandbox.smtp.mailtrap.io", "SMTP host")
+	flag.IntVar(&cfg.smtp.port, "smtp-port", 587, "SMTP port")
+	flag.StringVar(&cfg.smtp.username, "smtp-username", os.Getenv("SMTP_USERNAME"), "SMTP username")
+	flag.StringVar(&cfg.smtp.password, "smtp-password", os.Getenv("SMTP_PASSWORD"), "SMTP password")
+	flag.StringVar(&cfg.smtp.sender, "smtp-sender", os.Getenv("SMTP_SENDER"), "SMTP sender")
 
 	flag.Parse()
 
 	// init logger
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
-
+	logger.Info(os.Getenv("GREENLIGHT_DB_DSN"))
 	// init db by opening with cfg using helper (see below)
 	db, err := openDB(cfg)
 	if err != nil {
@@ -84,11 +100,25 @@ func main() {
 	// log success
 	logger.Info("db connection pool established")
 
+	// init mailer instance
+	mailer, err := mailer.New(
+		cfg.smtp.host,
+		cfg.smtp.port,
+		cfg.smtp.username,
+		cfg.smtp.password,
+		cfg.smtp.sender,
+	)
+	if err != nil {
+		logger.Error(err.Error())
+		os.Exit(1)
+	}
+
 	// declare app object and pass in it's properties
 	app := &application{
 		config: cfg,
 		logger: logger,
 		models: data.NewModels(db),
+		mailer: mailer,
 	}
 
 	err = app.serve()
