@@ -164,3 +164,21 @@ func (app *application) readInt(qs url.Values, key string, defaultValue int, v *
 	// sucess!
 	return i
 }
+
+// background helper to run a function in the background
+// and recover from a possible panic during function execution
+func (app *application) background(fn func()) {
+	// start background func with panic recovery
+	go func() {
+		// recover panic
+		defer func() {
+			pv := recover()
+			if pv != nil {
+				app.logger.Error(fmt.Sprintf("%v", pv))
+			}
+		}()
+
+		// execute function
+		fn()
+	}()
+}

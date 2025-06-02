@@ -58,16 +58,17 @@ func (app *application) registerUserHandler(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	// use the users email to send an email with the users data to the user.
-	err = app.mailer.Send(user.Email, "user_welcome.tmpl", user)
-	app.logger.Error(user.Email)
-	if err != nil {
-		app.serverErrorResponse(w, r, err)
-		return
-	}
+	app.background(func() {
+		// use the users email to send an email with the users data to the user.
+		err = app.mailer.Send(user.Email, "user_welcome.tmpl", user)
+		if err != nil {
+			app.logger.Error(err.Error())
+		}
 
-	// write the created user into the 201 response
-	err = app.writeJSON(w, http.StatusCreated, envelope{"user": user}, nil)
+	})
+
+	// write the created user into the 202 response, the processing isnt done yet so 202 not 201
+	err = app.writeJSON(w, http.StatusAccepted, envelope{"user": user}, nil)
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
 	}
