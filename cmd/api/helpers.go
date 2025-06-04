@@ -168,8 +168,12 @@ func (app *application) readInt(qs url.Values, key string, defaultValue int, v *
 // background helper to run a function in the background
 // and recover from a possible panic during function execution
 func (app *application) background(fn func()) {
+	// increment wg counter
+	app.wg.Add(1)
 	// start background func with panic recovery
 	go func() {
+		// defer wg decrement
+		defer app.wg.Done()
 		// recover panic
 		defer func() {
 			pv := recover()

@@ -7,6 +7,7 @@ import (
 	"log"
 	"log/slog"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/Bekian/greenlight/internal/data"
@@ -49,6 +50,7 @@ type application struct {
 	logger *slog.Logger
 	models data.Models
 	mailer *mailer.Mailer
+	wg     sync.WaitGroup
 }
 
 // DIFF Note: several CLI flag default values use local environment variables for security.
@@ -87,7 +89,6 @@ func main() {
 
 	// init logger
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
-	logger.Info(os.Getenv("GREENLIGHT_DB_DSN"))
 	// init db by opening with cfg using helper (see below)
 	db, err := openDB(cfg)
 	if err != nil {
