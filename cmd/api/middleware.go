@@ -30,6 +30,7 @@ func (app *application) recoverPanic(next http.Handler) http.Handler {
 			}
 		}()
 
+		// call next handler
 		next.ServeHTTP(w, r)
 	})
 }
@@ -94,6 +95,7 @@ func (app *application) rateLimit(next http.Handler) http.Handler {
 
 		// ensure mutex is unlocked
 		mu.Unlock()
+		// call next handler
 		next.ServeHTTP(w, r)
 	})
 }
@@ -155,4 +157,38 @@ func (app *application) authenticate(next http.Handler) http.Handler {
 		// call next handler
 		next.ServeHTTP(w, r)
 	})
+}
+
+// middleware to check if a user isnt anonymous
+func (app *application) requireAuthenticatedUser(next http.HandlerFunc) http.HandlerFunc {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		user := app.contextGetUser(r)
+
+		if user.IsAnonymous() {
+			app.authenticationRequiredResponse(w, r)
+			return
+		}
+
+		// call next handler
+		next.ServeHTTP(w, r)
+	})
+}
+
+// check if a user is both authenticated and activated
+func (app *application) requireActivatedUser(next http.HandlerFunc) http.HandlerFunc {
+	// we assign it to a variable so we can pass it later
+	fn := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		user := app.contextGetUser(r)
+
+		// check if the user is activated
+		if !user.Activated {
+			app.inactiveAccountResponse(w, r)
+			return
+		}
+
+		next.ServeHTTP(w, r)
+	})
+
+	// use the middleware with the func
+	return app.requireAuthenticatedUser(fn)
 }

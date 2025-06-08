@@ -47,6 +47,19 @@ func (app *application) invalidAuthenticationTokenResponse(w http.ResponseWriter
 	app.errResponse(w, r, http.StatusUnauthorized, message)
 }
 
+// 401 C
+func (app *application) authenticationRequiredResponse(w http.ResponseWriter, r *http.Request) {
+	message := "you must be authenticated to use this resource"
+	app.errResponse(w, r, http.StatusUnauthorized, message)
+}
+
+// 403
+// BEK Note: i think this name is a bit misleading but i will ignore this minor detail
+func (app *application) inactiveAccountResponse(w http.ResponseWriter, r *http.Request) {
+	message := "your user account must be activated to access this resource"
+	app.errResponse(w, r, http.StatusForbidden, message)
+}
+
 // 404
 func (app *application) notFoundResponse(w http.ResponseWriter, r *http.Request) {
 	msg := "the requested resource could not be found"
