@@ -12,16 +12,17 @@ import (
 
 // constants for token scope
 const (
-	ScopeActivation = "activation"
+	ScopeActivation     = "activation"
+	ScopeAuthentication = "authentication"
 )
 
 // data relating to an individual token
 type Token struct {
-	Plaintext string
-	Hash      []byte
-	UserId    int64
-	Expiry    time.Time
-	Scope     string
+	Plaintext string    `json:"token"` // this tag is more meaningful to the user than 'plaintext'
+	Hash      []byte    `json:"-"`
+	UserId    int64     `json:"-"`
+	Expiry    time.Time `json:"expiry"`
+	Scope     string    `json:"-"`
 }
 
 // DIFF Note: slightly different casing for userID

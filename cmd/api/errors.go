@@ -32,6 +32,21 @@ func (app *application) badRequestResponse(w http.ResponseWriter, r *http.Reques
 	app.errResponse(w, r, http.StatusBadRequest, err.Error())
 }
 
+// 401 A
+func (app *application) invalidCredentialsResponse(w http.ResponseWriter, r *http.Request) {
+	message := "invalid authentication credentials"
+	app.errResponse(w, r, http.StatusUnauthorized, message)
+}
+
+// 401 B
+func (app *application) invalidAuthenticationTokenResponse(w http.ResponseWriter, r *http.Request) {
+	// this tells the client we expect them to auth using a bearer token
+	w.Header().Set("WWW-Authenticate", "Bearer")
+
+	message := "invalid or missing authentication token"
+	app.errResponse(w, r, http.StatusUnauthorized, message)
+}
+
 // 404
 func (app *application) notFoundResponse(w http.ResponseWriter, r *http.Request) {
 	msg := "the requested resource could not be found"

@@ -16,6 +16,8 @@ var (
 	ErrDuplicateEmail = errors.New("duplicate email")
 )
 
+var AnonymousUser = &User{}
+
 // user struct, json ommitted values are "-"
 type User struct {
 	ID        int64     `json:"id"`
@@ -25,6 +27,11 @@ type User struct {
 	Password  password  `json:"-"`
 	Activated bool      `json:"activated"`
 	Version   int       `json:"-"`
+}
+
+// check if user is anonymous
+func (u *User) IsAnonymous() bool {
+	return u == AnonymousUser
 }
 
 // UserModel connection wrapper
@@ -125,7 +132,7 @@ func (m UserModel) Insert(user *User) error {
 func (m UserModel) GetByEmail(email string) (*User, error) {
 	query := `
 	SELECT id, created_at, name, email, password_hash, activated, version
-	FROM user
+	FROM users
 	WHERE email = $1
 	`
 
