@@ -12,14 +12,14 @@ func (app *application) routes() http.Handler {
 	// handle 404 and 405 responses respectively
 	router.NotFound = http.HandlerFunc(app.notFoundResponse)
 	router.MethodNotAllowed = http.HandlerFunc(app.methodNotAllowedResponse)
+	router.HandlerFunc(http.MethodGet, "/v1/healthcheck", app.healthcheckHandler)
 
 	// register methods on the routes
-	router.HandlerFunc(http.MethodGet, "/v1/movies", app.requireActivatedUser(app.listMoviesHandler))
-	router.HandlerFunc(http.MethodGet, "/v1/healthcheck", app.requireActivatedUser(app.healthcheckHandler))
-	router.HandlerFunc(http.MethodPost, "/v1/movies", app.requireActivatedUser(app.createMovieHandler))
-	router.HandlerFunc(http.MethodGet, "/v1/movies/:id", app.requireActivatedUser(app.showMovieHandler))
-	router.HandlerFunc(http.MethodPatch, "/v1/movies/:id", app.requireActivatedUser(app.updateMovieHandler))
-	router.HandlerFunc(http.MethodDelete, "/v1/movies/:id", app.requireActivatedUser(app.deleteMovieHandler))
+	router.HandlerFunc(http.MethodGet, "/v1/movies", app.requirePerm("movies:read", app.listMoviesHandler))
+	router.HandlerFunc(http.MethodPost, "/v1/movies", app.requirePerm("movies:write", app.createMovieHandler))
+	router.HandlerFunc(http.MethodGet, "/v1/movies/:id", app.requirePerm("movies:read", app.showMovieHandler))
+	router.HandlerFunc(http.MethodPatch, "/v1/movies/:id", app.requirePerm("movies:write", app.updateMovieHandler))
+	router.HandlerFunc(http.MethodDelete, "/v1/movies/:id", app.requirePerm("movies:write", app.deleteMovieHandler))
 
 	// user endpoints
 	router.HandlerFunc(http.MethodPost, "/v1/users", app.registerUserHandler)

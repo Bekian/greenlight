@@ -192,3 +192,32 @@ func (app *application) requireActivatedUser(next http.HandlerFunc) http.Handler
 	// use the middleware with the func
 	return app.requireAuthenticatedUser(fn)
 }
+
+// first param is perm code that the user must have to use the endpoint
+// DIFF Note: 16.4 is called "requirePermission"
+func (app *application) requirePerm(code string, next http.HandlerFunc) http.HandlerFunc {
+	fn := func(w http.ResponseWriter, r *http.Request) {
+		// get user from context
+		user := app.contextGetUser(r)
+
+		// get perms from user
+		// DIFF Note: perms is "permisisons"
+		perms, err := app.models.Permissions.GetAllForUser(user.ID)
+		if err != nil {
+			app.serverErrorResponse(w, r, err)
+			return
+		}
+
+		// check if slice has the required perm code
+		if !perms.Include(code) {
+			app.notPermittedResponse(w, r)
+			return
+		}
+
+		// at this point the user has the correct perms
+		next.ServeHTTP(w, r)
+	}
+
+	// wrap this with requireActivatedUser middleware
+	return app.requireActivatedUser(fn)
+}

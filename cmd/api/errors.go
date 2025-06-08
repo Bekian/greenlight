@@ -53,10 +53,16 @@ func (app *application) authenticationRequiredResponse(w http.ResponseWriter, r 
 	app.errResponse(w, r, http.StatusUnauthorized, message)
 }
 
-// 403
+// 403 A
 // BEK Note: i think this name is a bit misleading but i will ignore this minor detail
 func (app *application) inactiveAccountResponse(w http.ResponseWriter, r *http.Request) {
 	message := "your user account must be activated to access this resource"
+	app.errResponse(w, r, http.StatusForbidden, message)
+}
+
+// 403 B
+func (app *application) notPermittedResponse(w http.ResponseWriter, r *http.Request) {
+	message := "your user account doesn't have the necessary permissions to access this resource"
 	app.errResponse(w, r, http.StatusForbidden, message)
 }
 
