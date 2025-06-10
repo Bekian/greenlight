@@ -221,3 +221,28 @@ func (app *application) requirePerm(code string, next http.HandlerFunc) http.Han
 	// wrap this with requireActivatedUser middleware
 	return app.requireActivatedUser(fn)
 }
+
+// temporary middleware wrapper to allow all cors requests
+func (app *application) enableCORS(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Vary", "Origin")
+
+		// get req's origin header value
+		origin := r.Header.Get("Origin")
+
+		// only perform this block if theres a header
+		if origin != "" {
+			// loop through the config trusted origins
+			// check if the header is a trusted origin
+			for i := range app.config.cors.trustedOrigins {
+				if origin == app.config.cors.trustedOrigins[i] {
+					// set origin to allow the found origin
+					w.Header().Set("Access-Control-Allow-Origin", origin)
+					break
+				}
+			}
+		}
+		// call next handler
+		next.ServeHTTP(w, r)
+	})
+}
