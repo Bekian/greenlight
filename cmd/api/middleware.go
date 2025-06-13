@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"expvar"
 	"fmt"
 	"net/http"
 	"strings"
@@ -257,5 +258,33 @@ func (app *application) enableCORS(next http.Handler) http.Handler {
 		}
 		// call next handler
 		next.ServeHTTP(w, r)
+	})
+}
+
+// DIFF Note: the third variable here uses the greek letter mu here for microseconds,
+// im too lazy to type that, so im using "us" instead
+func (app *application) metrics(next http.Handler) http.Handler {
+	// init variables when the middleware chain is created
+	var (
+		totalRequestsReceived           = expvar.NewInt("total_requests_received")
+		totalResponsesSent              = expvar.NewInt("total_responses_sent")
+		totalProcessingTimeMicroseconds = expvar.NewInt("total_processing_time_us")
+	)
+
+	// wrap the following around each request
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// get start time
+		start := time.Now()
+		// increment number of reqs received
+		totalRequestsReceived.Add(1)
+
+		// call next handler
+		next.ServeHTTP(w, r)
+
+		// increment number of responses sent
+		totalResponsesSent.Add(1)
+		// get duration of proccsesing time and add to total
+		duration := time.Since(start).Microseconds()
+		totalProcessingTimeMicroseconds.Add(duration)
 	})
 }
