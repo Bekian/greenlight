@@ -5,6 +5,7 @@ import (
 	"expvar"
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -269,6 +270,7 @@ func (app *application) metrics(next http.Handler) http.Handler {
 		totalRequestsReceived           = expvar.NewInt("total_requests_received")
 		totalResponsesSent              = expvar.NewInt("total_responses_sent")
 		totalProcessingTimeMicroseconds = expvar.NewInt("total_processing_time_us")
+		totalResponsesSentByStatus      = expvar.NewMap("total_responses_sent_by_status")
 	)
 
 	// wrap the following around each request
@@ -278,13 +280,55 @@ func (app *application) metrics(next http.Handler) http.Handler {
 		// increment number of reqs received
 		totalRequestsReceived.Add(1)
 
+		// custom response writer wrapper to track above metrics
+		mw := newMetricsReponseWriter(w)
+
 		// call next handler
-		next.ServeHTTP(w, r)
+		next.ServeHTTP(mw, r)
 
 		// increment number of responses sent
 		totalResponsesSent.Add(1)
+
+		// convert status code to string and add to map
+		totalResponsesSentByStatus.Add(strconv.Itoa(mw.statusCode), 1)
+
 		// get duration of proccsesing time and add to total
 		duration := time.Since(start).Microseconds()
 		totalProcessingTimeMicroseconds.Add(duration)
 	})
+}
+
+type metricsResponseWriter struct {
+	wrapped       http.ResponseWriter
+	statusCode    int
+	headerWritten bool
+}
+
+func newMetricsReponseWriter(w http.ResponseWriter) *metricsResponseWriter {
+	return &metricsResponseWriter{
+		wrapped:    w,
+		statusCode: http.StatusOK,
+	}
+}
+
+func (mw *metricsResponseWriter) Header() http.Header {
+	return mw.wrapped.Header()
+}
+
+func (mw *metricsResponseWriter) WriteHeader(statusCode int) {
+	mw.wrapped.WriteHeader(statusCode)
+
+	if !mw.headerWritten {
+		mw.statusCode = statusCode
+		mw.headerWritten = true
+	}
+}
+
+func (mw *metricsResponseWriter) Write(b []byte) (int, error) {
+	mw.headerWritten = true
+	return mw.wrapped.Write(b)
+}
+
+func (mw *metricsResponseWriter) Unwrap() http.ResponseWriter {
+	return mw.wrapped
 }
