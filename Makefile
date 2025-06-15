@@ -1,4 +1,8 @@
-# the phony rule makes a rule a phonty target which prevents naming collisions between rules and files
+# ==================================================================================== #
+# HELPERS
+# ==================================================================================== #
+
+# the phony rule makes a rule a phony target which prevents naming collisions between rules and files
 # this prints comments with 2 octothorpes/tags/pound signs
 ## help: print this message
 .PHONY: help
@@ -10,6 +14,13 @@ help:
 confirm:
 	@echo -n 'Are you sure? [y/N] ' && read ans && [ $${ans:-N} = y ]
 
+# ==================================================================================== #
+# DEVELOPMENT
+# ==================================================================================== #
+
+# DIFF Note: 19.2 alex adds an environment variable here
+# which is loaded by including a .envrc file
+# we're already doing this programmatically via godotenv, so we exclude this step
 ## run/api: run the cmd/api application
 .PHONY: run/api
 run/api:
@@ -32,3 +43,27 @@ db/migrations/new:
 db/migrations/up: confirm
 	@echo 'Running up migrations...'
 	migrate -path ./migrations -database ${GREENLIGHT_DB_DSN} up
+
+# ==================================================================================== #
+# QUALITY CONTROL
+# ==================================================================================== #
+
+## tidy: tidy module deps and format all .go files
+.PHONY: tidy
+tidy:
+	@echo 'Tidying module dependencies...'
+	go mod tidy
+	@echo 'Formatting .go files...'
+	go fmt ./...
+
+## audit: run quality control checks
+.PHONY: audit
+audit:
+	@echo 'Checking module dependencies...'
+	go mod tidy --diff
+	go mod verify
+	@echo 'Vetting code...'
+	go vet ./...
+	go tool staticcheck ./...
+	@echo 'Running tests...'
+	go test -race -vet=off ./...
