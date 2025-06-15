@@ -26,3 +26,5 @@ go.work.sum
 
 notes.md
 noteAssets/
+bin/
+vendor/
