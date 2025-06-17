@@ -74,7 +74,7 @@ func main() {
 	}
 
 	// read the cli flags into the config struct
-	// the 8080 port deviates from the 4000 port used in book
+	// DIIF Note: the 8080 port deviates from the 4000 port used in book
 	flag.IntVar(&cfg.port, "port", 8080, "API server port")
 	// the "testing" value deviates from "staging", as "testing" is more common here
 	flag.StringVar(&cfg.env, "env", "development", "Environment (development|testing|production)")

@@ -9,6 +9,76 @@ import (
 	"github.com/Bekian/greenlight/internal/validator"
 )
 
+// this token is used in the event the user's welcome activation token expires, or they dont get their email
+func (app *application) createActivationTokenHandler(w http.ResponseWriter, r *http.Request) {
+	// set the field we want to extract
+	var input struct {
+		Email string `json:"email"`
+	}
+	// get the field we want
+	err := app.readJSON(w, r, &input)
+	if err != nil {
+		app.badRequestResponse(w, r, err)
+		return
+	}
+
+	// validate the email
+	v := validator.New()
+
+	if data.ValidateEmail(v, input.Email); !v.Valid() {
+		app.failedValidationResponse(w, r, v.Errors)
+		return
+	}
+
+	// attempt to get the user by email to generate a new token for them
+	user, err := app.models.Users.GetByEmail(input.Email)
+	if err != nil {
+		switch {
+		case errors.Is(err, data.ErrRecordNotFound):
+			v.AddError("email", "no matching email address found")
+			app.failedValidationResponse(w, r, v.Errors)
+		default:
+			app.serverErrorResponse(w, r, err)
+		}
+		return
+	}
+
+	// return error if user is activated
+	if user.Activated {
+		v.AddError("error", "user has already been activated")
+		app.failedValidationResponse(w, r, v.Errors)
+		return
+	}
+
+	// create new activation token
+	token, err := app.models.Tokens.New(user.ID, 3*24*time.Hour, data.ScopeActivation)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+		return
+	}
+
+	// send the users activation token in an email in a goroutine
+	app.background(func() {
+		data := map[string]any{
+			"activationToken": token.Plaintext,
+		}
+
+		// use users db email value to send email
+		err := app.mailer.Send(user.Email, "token_activation.tmpl", data)
+		if err != nil {
+			app.logger.Error(err.Error())
+		}
+	})
+
+	// send 202 res with confirmation message
+	env := envelope{"message": "an email will be sent to you containing activation instructions"}
+
+	err = app.writeJSON(w, http.StatusAccepted, env, nil)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+	}
+}
+
 func (app *application) createAuthenticationTokenHandler(w http.ResponseWriter, r *http.Request) {
 	// parse email ad pass from req body
 	var input struct {
